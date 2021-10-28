@@ -1,0 +1,51 @@
+<html>
+
+<head>
+    <style>
+        table {
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        td,
+        th {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #dddddd;
+        }
+    </style>
+</head>
+
+<body style="text-align:center">
+    You searched for the term: {{term}}
+    <br />
+    Your search was executed in {{time}} ms
+    <br />
+    <table>
+        <tr>
+            <th>Doc ID</th>
+            <th>Doc Folder</th>
+            <th>Doc Name</th>
+            <th>Frequencies</th>
+        </tr>
+        {% for f in frequencies %}
+        <tr>
+            <td>{{f['Doc ID']}}</td>
+            <td>{{f['Doc Folder']}}</td>
+            <td>{{f['Doc Name']}}</td>
+            <td>{{f['Frequencies']}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <br />
+    <form action="http://0.0.0.0:5001/search" method="GET">
+        <button>Go Back to Search</button>
+    </form>
+</body>
+
+</html>

@@ -1,0 +1,20 @@
+<html>
+
+<head>
+</head>
+
+<body style="text-align:center">
+    <p id="buckets">Debug log: connected to GCP cluster and found buckets: {{buckets}}</p>
+    <b>Engine was loaded<br />&<br />Inverted indicies were constructed successfully!<br /><br />Please Select
+        Action</b>
+    <br /><br />
+    <form action="http://0.0.0.0:5001/search" method="POST">
+        <button id="search">Search for Term</button>
+    </form>
+    <br>
+    <form action="http://0.0.0.0:5001/top" method="POST">
+        <button id="top">Top-N</button>
+    </form>
+</body>
+
+</html>

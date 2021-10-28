@@ -1,0 +1,45 @@
+<html>
+
+<head>
+    <style>
+        table {
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        td,
+        th {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        tr:nth-child(even) {
+            background-color: #dddddd;
+        }
+    </style>
+</head>
+
+<body style="text-align:center">
+    Top-N Frequent Terms
+    <br />
+    <table>
+        <tr>
+            <th>Term</th>
+            <th>Total Frequencies</th>
+        </tr>
+        {% for f in frequencies %}
+        <tr>
+            <td>{{f['Term']}}</td>
+            <td>{{f['Frequencies']}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <br />
+    <form action="http://0.0.0.0:5001/top" method="GET">
+        <button>Go Back to Search</button>
+    </form>
+</body>
+
+</html>

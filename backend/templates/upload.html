@@ -1,0 +1,28 @@
+<html>
+
+<body style="text-align:center">
+    <b>Load My Engine</b>
+    <br /><br />
+    <form action="http://0.0.0.0:5001/uploader" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" multiple />
+        <input type="submit" value="Choose Files" />
+        <br>
+        <p id="file-list">
+            {% for f in files %}
+            {{f}}
+            <br>
+            {% endfor %}
+        </p>
+        <br>
+    </form>
+
+    <form action="http://0.0.0.0:5001/constructor" method="POST">
+        <button id="load-engine">Load Engine</button>
+    </form>
+</body>
+
+</html>
+<!-- docker -->
+<!-- http://0.0.0.0:5001/uploader -->
+<!-- local flask run -->
+<!-- http://127.0.0.1:5000/uploader -->
