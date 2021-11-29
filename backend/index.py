@@ -16,40 +16,34 @@ JAR_FILE = 'file:///usr/lib/hadoop/hadoop-streaming.jar'
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# @app.route('/favicon.ico')
-# def favicon(): 
-#     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
-
 @app.route('/')
 def upload_file():
    return render_template('upload.html')
-	
+
+# path to upload files into client side application folder
 @app.route('/uploader', methods = ['GET', 'POST'])
 def uploader():
    if request.method == 'POST':
         files = request.files.getlist('file')
-        print(files)
-        # remove all files in directory, initialize
         for f in files:
                 path = os.path.join(os.getcwd(), os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(f.filename)))
                 f.save(path)
+        # unzip and gunzip file, flatten directory
         subprocess.run(["./unzip.sh"])
-        show = 'file uploaded successfullyyyy: ' + path + ',   ,  <br/> hihi: <br/>' + '<br/>'.join(os.listdir(os.path.join(os.getcwd(), app.config['UPLOAD_FOLDER'])))
+        show = 'file uploaded successfully: ' + path + ',   ,  <br/> hihi: <br/>' + '<br/>'.join(os.listdir(os.path.join(os.getcwd(), app.config['UPLOAD_FOLDER'])))
         file_list = [f.filename for f in files]
         return render_template('upload.html', files = file_list)
-		
-@app.route('/constructor', methods = ['GET', 'POST'])
 
+# path to upload files to bucket, construct inverted indices, and merge/copy results to bucket	
+@app.route('/constructor', methods = ['GET', 'POST'])
 def constructor(): 
-        # here we connect with the 2nd application in GCP
+        # connect with the 2nd application in GCP
         storage_client = storage.Client()
         buckets = list(storage_client.list_buckets())
         print(buckets)
         bucket = storage_client.get_bucket('dataproc-staging-us-central1-454011530827-lsujzseq')
 
-        #
-        # save files to bucket
-        #
+        # save data files to bucket
         directory = os.path.join(os.getcwd(), 'RawData/')
         for filename in os.listdir(directory):
                 f = os.path.join(directory, filename)
@@ -57,15 +51,13 @@ def constructor():
                         blob = bucket.blob('project/test_data/'+filename)
                         blob.upload_from_filename(f)
 
-        # 
-        # hadoop job request 
-        #
+        # hadoop job request to construct inverted indices
+        # reference on converting gcloud command into python code using the dataproc API: 
+        # https://stackoverflow.com/questions/55566082/dataproc-submit-a-hadoop-job-via-python-client
         out_folder = 'out' + str(int(time.time()))
-
         cluster_client = dataproc.ClusterControllerClient(
                 client_options={"api_endpoint": f"{region}-dataproc.googleapis.com:443"}
         )
-
         job_client = dataproc.JobControllerClient(
                 client_options={"api_endpoint": "{}-dataproc.googleapis.com:443".format(region)}
         )
@@ -85,36 +77,27 @@ def constructor():
                         'python project_reducer.py'],
                 },
         }
-
         operation = job_client.submit_job_as_operation(
                 request={"project_id": project_id, "region": region, "job": job}
         )
         response = operation.result()
-
-        # Dataproc job output gets saved to the Google Cloud Storage bucket
-        # allocated to the job. Use a regex to obtain the bucket and blob info.
+        # use regex to obtain the bucket and blob info
+        # reference on parsing the output and download_as_string:
+        # https://cloud.google.com/dataproc/docs/guides/submit-job
         matches = re.match("gs://(.*?)/(.*)", response.driver_output_resource_uri)
-
         output = (
                 storage.Client()
                 .get_bucket(matches.group(1))
                 .blob(f"{matches.group(2)}.000000000")
                 .download_as_string()
         )
-
         print(f"Hadoop job finished successfully: {output}")
 
-        #
-        # pig job request
-        #
-
-        # Create the job client.
+        # pig job request tp run bash commands to copy reduce output files from bucket into cluster
+        # and merge into single file, then copy merged file into bucket
         job_client = dataproc.JobControllerClient(
                 client_options={"api_endpoint": "{}-dataproc.googleapis.com:443".format(region)}
         )
-
-        # Create the job config. 'main_jar_file_uri' can also be a
-        # Google Cloud Storage URL.
         job = {
                 "placement": {"cluster_name": cluster_name},
                 "pig_job": {
@@ -129,23 +112,17 @@ def constructor():
                                 }
                 },
         }
-
         operation = job_client.submit_job_as_operation(
                 request={"project_id": project_id, "region": region, "job": job}
         )
         response = operation.result()
-
-        # Dataproc job output gets saved to the Google Cloud Storage bucket
-        # allocated to the job. Use a regex to obtain the bucket and blob info.
         matches = re.match("gs://(.*?)/(.*)", response.driver_output_resource_uri)
-
         output = (
                 storage.Client()
                 .get_bucket(matches.group(1))
                 .blob(f"{matches.group(2)}.000000000")
                 .download_as_string()
         )
-
         print(f"Pig job finished successfully: {output}")
 
         return render_template('construct.html', buckets = output)
@@ -154,21 +131,19 @@ def constructor():
 def search():
         return render_template('search.html')
 
+# path to search a term(word) in all uploaded files
 @app.route('/search_term', methods = ['GET', 'POST'])
 def search_term():
+        # communicate with 2nd application, get the execution time and frequencies
         start_time = int(time.time())
         term = request.form.get('term').lower()
-        #
-        # communicate with 2nd application, get the execution time and frequencies
-        #
 
-        # Create the job client.
+        # pig job request to copy merge results and search.py into cluster
+        # run search.py on results
+        # copy search results to bucket
         job_client = dataproc.JobControllerClient(
                 client_options={"api_endpoint": "{}-dataproc.googleapis.com:443".format(region)}
         )
-
-        # Create the job config. 'main_jar_file_uri' can also be a
-        # Google Cloud Storage URL.
         job = {
                 "placement": {"cluster_name": cluster_name},
                 "pig_job": {
@@ -185,28 +160,20 @@ def search_term():
                                 }
                 },
         }
-
         operation = job_client.submit_job_as_operation(
                 request={"project_id": project_id, "region": region, "job": job}
         )
         response = operation.result()
-
-        # Dataproc job output gets saved to the Google Cloud Storage bucket
-        # allocated to the job. Use a regex to obtain the bucket and blob info.
         matches = re.match("gs://(.*?)/(.*)", response.driver_output_resource_uri)
-
         output = (
                 storage.Client()
                 .get_bucket(matches.group(1))
                 .blob(f"{matches.group(2)}.000000000")
                 .download_as_string()
         )
-
         print(f"Pig job finished successfully: {output}")
 
-        #
-        # Get results
-        #
+        # Read search results from bucket and parsing into table on web app
         storage_client = storage.Client()
         bucket = storage_client.get_bucket('dataproc-staging-us-central1-454011530827-lsujzseq')
         blob = bucket.get_blob('project/search_results')
@@ -237,19 +204,18 @@ def search_term():
 def top():
         return render_template('top.html')
 
+# path to return top n words with most occurrences
 @app.route('/top_n', methods = ['GET', 'POST'])
 def top_n():
         start_time = int(time.time())
         n = request.form.get('n', type=int)
         print(n)
-
-        # Create the job client.
+        # pig job to copy results file and topn.py to cluster
+        # run topn.py on results file
+        # copy top n results to bucket
         job_client = dataproc.JobControllerClient(
                 client_options={"api_endpoint": "{}-dataproc.googleapis.com:443".format(region)}
         )
-
-        # Create the job config. 'main_jar_file_uri' can also be a
-        # Google Cloud Storage URL.
         job = {
                 "placement": {"cluster_name": cluster_name},
                 "pig_job": {
@@ -266,28 +232,20 @@ def top_n():
                                 }
                 },
         }
-
         operation = job_client.submit_job_as_operation(
                 request={"project_id": project_id, "region": region, "job": job}
         )
         response = operation.result()
-
-        # Dataproc job output gets saved to the Google Cloud Storage bucket
-        # allocated to the job. Use a regex to obtain the bucket and blob info.
         matches = re.match("gs://(.*?)/(.*)", response.driver_output_resource_uri)
-
         output = (
                 storage.Client()
                 .get_bucket(matches.group(1))
                 .blob(f"{matches.group(2)}.000000000")
                 .download_as_string()
         )
-
         print(f"Pig job finished successfully: {output}")
 
-        #
-        # Get results
-        #
+        # read top n results from bucket and parsing into table on web app
         storage_client = storage.Client()
         bucket = storage_client.get_bucket('dataproc-staging-us-central1-454011530827-lsujzseq')
         blob = bucket.get_blob('project/topn_results')
@@ -312,33 +270,3 @@ def top_n():
 if __name__ == '__main__': 
 #    app.run(debug = True)
         app.run(host ='0.0.0.0', port = 5001, debug = True) 
-
-
-'''
-
-export FLASK_APP=index
-export FLASK_ENV=development
-export GOOGLE_APPLICATION_CREDENTIALS="/Users/suyanxu/GitHub/14848-Course-Project/backend/course-project-ii-suyanx-d234ab287080.json"
-flask run
-docker build -t suyanxv/app1 .
-docker run -d --name app1 -p 5001:5001 suyanxv/app1
-http://0.0.0.0:5001/upload
-
-hadoop jar /usr/lib/hadoop/hadoop-streaming.jar -files temperature_mapper.py,temperature_reducer.py -mapper 'python temperature_mapper.p
-y' -reducer 'python temperature_reducer.py' -input /data/* -output /output
-
-
-
-
-gcloud dataproc jobs submit hadoop \
-        --cluster=cluster-b6a1 \
-        --region=us-central1 \
-        --jar=file:///usr/lib/hadoop/hadoop-streaming.jar \
-        --files gs://dataproc-staging-us-central1-454011530827-lsujzseq/hw/temperature_mapper.py,gs://dataproc-staging-us-central1-454011530827-lsujzseq/hw/temperature_reducer.py \
-        --  -input gs://dataproc-staging-us-central1-454011530827-lsujzseq/hw/data/* -output gs://dataproc-staging-us-central1-454011530827-lsujzseq/hw/out3/ -mapper 'python temperature_mapper.py' -reducer 'python temperature_reducer.py'
-
-
-
-
-
-'''

@@ -1,0 +1,8 @@
+backend/RawData/*
+backend/uploads/*
+backend/__pycache__
+Data/*
+Data.zip
+Untitled.ipynb
+NewData/*
+.ipynb_checkpoints

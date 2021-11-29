@@ -3,7 +3,7 @@
 <body style="text-align:center">
     <b>Load My Engine</b>
     <br /><br />
-    <form action="http://127.0.0.1:5000/uploader" method="POST" enctype="multipart/form-data">
+    <form action="http://0.0.0.0:5001/uploader" method="POST" enctype="multipart/form-data">
         <input type="file" name="file" multiple />
         <input type="submit" value="Choose Files" />
         <br>
@@ -16,13 +16,9 @@
         <br>
     </form>
 
-    <form action="http://127.0.0.1:5000/constructor" method="POST">
+    <form action="http://0.0.0.0:5001/constructor" method="POST">
         <button id="load-engine">Load Engine</button>
     </form>
 </body>
 
 </html>
-<!-- docker -->
-<!-- http://0.0.0.0:5001/uploader -->
-<!-- local flask run -->
-<!-- http://127.0.0.1:5000/uploader -->

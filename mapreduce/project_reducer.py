@@ -5,6 +5,7 @@ import sys
 current_word = None
 current_count = 0
 current_posting = []
+# use dictionary to store postings
 current_dict = dict()
 
 for line in sys.stdin:
@@ -28,7 +29,6 @@ for line in sys.stdin:
     else:
         if current_word:
             print('%s\t%s\t%d' % (current_word, current_dict, current_count))
-            # sort posting
         current_word = word
         current_count = count
         current_posting = [posting]
