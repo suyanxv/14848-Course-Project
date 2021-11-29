@@ -74,7 +74,7 @@ After Hadoop application is executed, when the Top N functionality is called, th
 
 The client side application uses Python Flask
 
-1. Clone this repository
+1. Clone this repository. Since I cannot commit my JSON keyfile to GitHub (essential for making the application work), I have uploaded it to drive: https://drive.google.com/file/d/19-6J3oy_14FaIf0De2675yHUXPx7Xmeh/view?usp=sharing . Please downlooad this JSON keyfile and store it in the `/14848-Course-Project/backend` directory
 
 2. Go into the directory that contains the Dockerfile, build the docker image 
 
@@ -82,7 +82,7 @@ The client side application uses Python Flask
 docker build -t [your dockerhub id]/app1 .
 ```
 
-Alternatively, you could use the public docker image on DockerHub to get the docker image, URL: https://hub.docker.com/r/suyanxv/app1, command:
+Alternatively, you could use the public docker image on DockerHub, without having to add the JSON keyfile, URL: https://hub.docker.com/r/suyanxv/app1, command:
 
 ```sh
 docker pull suyanxv/app1
@@ -92,6 +92,12 @@ docker pull suyanxv/app1
 
 ``` sh
 docker run -d --name app1 -p 5001:5001 [your dockerhub id]/app1
+```
+
+or if using the existing public Docker image on DockerHub, do
+
+```sh
+docker run -d --name app1 -p 5001:5001 suyanxv/app1
 ```
 
 4. Open http://0.0.0.0:5001 in a web browser, this will lead you to the main page to upload files
